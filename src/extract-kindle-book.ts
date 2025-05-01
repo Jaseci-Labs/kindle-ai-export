@@ -8,10 +8,10 @@ import delay from 'delay'
 import { chromium, type Locator } from 'playwright'
 
 import type { BookInfo, BookMeta, BookMetadata, PageChunk } from './types'
+import { AMAZON_EMAIL, AMAZON_PASSWORD } from './constants'
 import {
   assert,
   deromanize,
-  getEnv,
   normalizeAuthors,
   parseJsonpResponse
 } from './utils'
@@ -27,14 +27,9 @@ interface TocItem extends PageNav {
   locator?: Locator
 }
 
-async function main() {
-  const asin = getEnv('ASIN')
-  const amazonEmail = getEnv('AMAZON_EMAIL')
-  const amazonPassword = getEnv('AMAZON_PASSWORD')
-  assert(asin, 'ASIN is required')
-  assert(amazonEmail, 'AMAZON_EMAIL is required')
-  assert(amazonPassword, 'AMAZON_PASSWORD is required')
-
+async function main(asin: string) {
+  const amazonEmail = AMAZON_EMAIL
+  const amazonPassword = AMAZON_PASSWORD
   const outDir = path.join('out', asin)
   const userDataDir = path.join(outDir, 'data')
   const pageScreenshotsDir = path.join(outDir, 'pages')
@@ -85,7 +80,7 @@ async function main() {
         }
         meta = metadata
       }
-    } catch {}
+    } catch { }
   })
 
   await Promise.any([
@@ -108,12 +103,13 @@ async function main() {
 
       // Only enter 2-factor auth code if needed
       if (code) {
-        await page.locator('input[type="tel"]').fill(code)
-        await page
-          .locator(
-            'input[type="submit"][aria-labelledby="cvf-submit-otp-button-announce"]'
-          )
-          .click()
+
+        // await page.locator('input[type="tel"]').fill(code)
+        // await page
+        //   .locator(
+        //     'input[type="submit"][aria-labelledby="cvf-submit-otp-button-announce"]'
+        //   )
+        //   .click()
       }
     }
 
@@ -253,7 +249,7 @@ async function main() {
   console.warn(
     `reading ${totalContentPages} pages${total > totalContentPages ? ` (of ${total} total pages stopping at "${parsedToc.afterLastPageTocItem!.title}")` : ''}...`
   )
-
+  let reachedLastPage = false;
   do {
     const pageNav = await getPageNav()
     if (pageNav?.page === undefined) {
@@ -276,9 +272,9 @@ async function main() {
     const screenshotPath = path.join(
       pageScreenshotsDir,
       `${index}`.padStart(pagePadding, '0') +
-        '-' +
-        `${pageNav.page}`.padStart(pagePadding, '0') +
-        '.png'
+      '-' +
+      `${pageNav.page}`.padStart(pagePadding, '0') +
+      '.png'
     )
     await fs.writeFile(screenshotPath, b)
     pages.push({
@@ -323,6 +319,7 @@ async function main() {
         // await delay(500)
       } catch (err: any) {
         // No next page to navigate to
+        reachedLastPage = true;
         console.warn(
           'unable to navigate to next page; breaking...',
           err.message
@@ -345,6 +342,10 @@ async function main() {
 
       ++retries
     } while (true)
+    if (reachedLastPage) {
+      console.log('reached last page; breaking...')
+      break
+    }
   } while (true)
 
   const result: BookMetadata = { info: info!, meta: meta!, toc, pages }
@@ -352,7 +353,7 @@ async function main() {
     path.join(outDir, 'metadata.json'),
     JSON.stringify(result, null, 2)
   )
-  console.log(JSON.stringify(result, null, 2))
+  // console.log(JSON.stringify(result, null, 2))
 
   if (initialPageNav?.page !== undefined) {
     console.warn(`resetting back to initial page ${initialPageNav.page}...`)
@@ -447,4 +448,4 @@ function parseTocItems(tocItems: TocItem[]) {
   }
 }
 
-await main()
+export default main;

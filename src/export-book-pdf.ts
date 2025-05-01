@@ -7,12 +7,9 @@ import path from 'node:path'
 import PDFDocument from 'pdfkit'
 
 import type { BookMetadata, ContentChunk } from './types'
-import { assert, getEnv } from './utils'
+import { assert } from './utils'
 
-async function main() {
-  const asin = getEnv('ASIN')
-  assert(asin, 'ASIN is required')
-
+async function main(asin: string) {
   const outDir = path.join('out', asin)
 
   const content = JSON.parse(
@@ -41,7 +38,7 @@ async function main() {
   const fontSize = 12
 
   const renderTitlePage = () => {
-    ;(doc as any).outline.addItem('Title Page')
+    ; (doc as any).outline.addItem('Title Page')
     doc.fontSize(48)
     doc.y = doc.page.height / 2 - doc.heightOfString(title) / 2
     doc.text(title, { align: 'center' })
@@ -83,7 +80,7 @@ async function main() {
     const chunks = content.slice(index, nextIndex)
     const text = chunks.map((chunk) => chunk.text).join(' ')
 
-    ;(doc as any).outline.addItem(tocItem.title)
+      ; (doc as any).outline.addItem(tocItem.title)
     doc.fontSize(20)
     doc.text(tocItem.title, { align: 'center', lineGap: 16 })
 
@@ -107,4 +104,4 @@ async function main() {
   })
 }
 
-await main()
+export default main

@@ -8,10 +8,10 @@ import { OpenAIClient } from 'openai-fetch'
 import pMap from 'p-map'
 
 import type { ContentChunk } from './types'
-import { assert, getEnv } from './utils'
+import { OPENAI_API_KEY } from './constants'
+import { assert } from './utils'
 
-async function main() {
-  const asin = getEnv('ASIN')
+async function main(asin: string) {
   assert(asin, 'ASIN is required')
 
   const outDir = path.join('out', asin)
@@ -19,7 +19,7 @@ async function main() {
   const pageScreenshots = await globby(`${pageScreenshotsDir}/*.png`)
   assert(pageScreenshots.length, 'no page screenshots found')
 
-  const openai = new OpenAIClient()
+  const openai = new OpenAIClient({ apiKey: OPENAI_API_KEY })
 
   const content: ContentChunk[] = (
     await pMap(
@@ -120,4 +120,4 @@ Do not include any additional text, descriptions, or punctuation. Ignore any emb
   console.log(JSON.stringify(content, null, 2))
 }
 
-await main()
+export default main
